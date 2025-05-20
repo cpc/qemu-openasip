@@ -1221,3 +1221,20 @@ static bool trans_csrrci(DisasContext *ctx, arg_csrrci * a)
                              ctx->zero, ctx->zero, mask, ctx->zero);
     }
 }
+#ifdef ENABLE_OPENASIP
+static bool trans_unknown(DisasContext *ctx, uint32_t insn, arg_unknown *a)
+{
+    TCGv src1 = get_gpr(ctx, a->rs1, EXT_NONE);
+    TCGv src2 = get_gpr(ctx, a->rs2, EXT_NONE);
+    TCGv src3 = get_gpr(ctx, a->rs3, EXT_NONE);
+    TCGv dest = dest_gpr(ctx, a->rd);
+
+
+    TCGv_i32 instruction = tcg_constant_i32(insn);
+    gen_helper_unknown(dest, src1, src2, src3, instruction);
+
+    gen_set_gpr(ctx, a->rd, dest);
+
+    return true;
+}
+#endif /* ENABLE_OPENASIP*/

@@ -24,6 +24,12 @@
 #include "hw/sysbus.h"
 #include "hw/block/flash.h"
 #include "hw/intc/riscv_imsic.h"
+#ifdef ENABLE_OPENASIP
+#include "dlfcn.h"
+typedef int InitializeMachineFn(const char *machine_path, char **error);
+int initialize_openasip(char* libpath, char* machine_file_path);
+void *get_openasip_handle(void);
+#endif /* ENABLE_OPENASIP*/
 
 #define VIRT_CPUS_MAX_BITS             9
 #define VIRT_CPUS_MAX                  (1 << VIRT_CPUS_MAX_BITS)
@@ -64,6 +70,10 @@ struct RISCVVirtState {
     struct GPEXHost *gpex_host;
     OnOffAuto iommu_sys;
     uint16_t pci_iommu_bdf;
+    #ifdef ENABLE_OPENASIP
+    char* libopenasip_path;
+    char* openasip_machine_path;
+    #endif /* ENABLE_OPENASIP*/
 };
 
 enum {

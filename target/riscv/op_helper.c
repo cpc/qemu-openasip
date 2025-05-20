@@ -715,3 +715,77 @@ target_ulong helper_hyp_hlvx_wu(CPURISCVState *env, target_ulong addr)
 }
 
 #endif /* !CONFIG_USER_ONLY */
+
+
+
+
+#ifdef ENABLE_OPENASIP
+#include "hw/riscv/virt.h"
+typedef int UnpackInstructionFn(const uint32_t opcode,
+                                char **output,
+                                char **error);
+static UnpackInstructionFn *UnpackInstruction;
+
+#if TARGET_LONG_BITS == 32
+typedef int ExecuteInstruction32Fn(const char *opName,
+                                   const uint32_t *inputs,
+                                   uint32_t *output,
+                                   char **error_msg);
+
+static ExecuteInstruction32Fn *ExecuteInstruction32;
+#else
+typedef int ExecuteInstruction64Fn(const char *opName,
+                                   const uint64_t *inputs,
+                                   uint64_t *output,
+                                   char **error_msg);
+
+static ExecuteInstruction64Fn *ExecuteInstruction64;
+#endif
+
+target_ulong HELPER(unknown)(target_ulong rs1, target_ulong rs2, target_ulong rs3, uint32_t insn)
+{
+    void *h = get_openasip_handle();
+    if (!h)
+    {
+        fprintf(stderr, "Failed to get OpenASIP handle\n");
+        return EXIT_FAILURE;
+    }
+
+    const target_ulong inputs[] = {rs1, rs2, rs3};
+    target_ulong result;
+    char *instruction_name = NULL;
+    char *error = NULL;
+
+    UnpackInstruction = (UnpackInstructionFn *)dlsym(h, "UnpackInstruction");
+
+    int success = UnpackInstruction(insn, &instruction_name, &error);
+    if (success == -1)
+    {
+        fprintf(stderr, "UnpackInstruction error: %s\n", error);
+        free(error);
+        exit(EXIT_FAILURE);
+    }
+
+#if TARGET_LONG_BITS == 32
+    ExecuteInstruction32 = (ExecuteInstruction32Fn *)dlsym(h, "ExecuteInstruction32");
+    success = ExecuteInstruction32(instruction_name,
+                                   inputs,
+                                   &result,
+                                   &error);
+#else
+    ExecuteInstruction64 = (ExecuteInstruction64Fn *)dlsym(h, "ExecuteInstruction64");
+    success = ExecuteInstruction64(instruction_name,
+                                   inputs,
+                                   &result,
+                                   &error);
+#endif
+    if (success == -1)
+    {
+        fprintf(stderr, "ExecuteInstruction error: %s\n", error);
+        free(error);
+        free(instruction_name);
+        exit(EXIT_FAILURE);
+    }
+    return result;
+}
+#endif /* ENABLE_OPENASIP*/

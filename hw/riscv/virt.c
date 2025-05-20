@@ -1745,6 +1745,13 @@ static void virt_machine_init(MachineState *machine)
         sysbus_realize_and_unref(SYS_BUS_DEVICE(iommu_sys), &error_fatal);
     }
 
+    #ifdef ENABLE_OPENASIP
+    if (s->libopenasip_path || s->openasip_machine_path)
+    {
+        initialize_openasip(s->libopenasip_path, s->openasip_machine_path);
+    }
+    #endif /* ENABLE_OPENASIP*/
+
     s->machine_done.notify = virt_machine_done;
     qemu_add_machine_init_done_notifier(&s->machine_done);
 }
@@ -1875,6 +1882,96 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
     visit_type_OnOffAuto(v, name, &s->acpi, errp);
 }
 
+#ifdef ENABLE_OPENASIP
+static Lmid_t openasip_namespace;
+static void *openasip_handle = NULL;
+
+static char *virt_get_libopenasip_path(Object *obj, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    return g_strdup(s->libopenasip_path);
+}
+
+static void virt_set_libopenasip_path(Object *obj, const char *val, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    g_free(s->libopenasip_path);
+    s->libopenasip_path = g_strdup(val);
+}
+
+static char *virt_get_openasip_machine_path(Object *obj, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    return g_strdup(s->openasip_machine_path);
+}
+
+static void virt_set_openasip_machine_path(Object *obj, const char *val, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    g_free(s->openasip_machine_path);
+    s->openasip_machine_path = g_strdup(val);
+}
+
+static void load_openasip_so(char* path)
+{
+    void *h = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+    if (!h) {
+        fprintf(stderr, "dlopen failed: %s\n", dlerror());
+        exit(EXIT_FAILURE);
+    }
+    
+    if (dlinfo(h, RTLD_DI_LMID, &openasip_namespace) != 0) {
+        fprintf(stderr, "dlinfo failed: %s\n", dlerror());
+        exit(EXIT_FAILURE);
+    }
+    
+    openasip_handle = h;
+}
+
+int initialize_openasip(char* libpath, char* machine_file_path)
+{        
+    if (!libpath || !machine_file_path) {
+        fprintf(stderr, "Library path or machine file path is NULL\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    load_openasip_so(libpath);
+    
+    void *h = openasip_handle;
+    if (!h) {
+        fprintf(stderr, "Failed to get OpenASIP handle\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    dlerror();
+    InitializeMachineFn *init_machine = (InitializeMachineFn *)dlsym(h, "InitializeMachine");
+    char *dlsym_error = dlerror();
+    if (dlsym_error) {
+        fprintf(stderr, "Failed to find InitializeMachine symbol: %s\n", dlsym_error);
+        exit(EXIT_FAILURE);
+    }
+    
+    fprintf(stderr, "Initializing OpenASIP machine with file: %s\n", machine_file_path);
+    char* err = NULL;
+    int status = init_machine(machine_file_path, &err);
+    if (status == -1) {
+        fprintf(stderr, "Error initializing the OpenASIP machine: %s\n", err ? err : "Unknown error");
+        exit(EXIT_FAILURE);
+    }
+    
+    return 0;
+}
+
+void *get_openasip_handle(void) {
+    if (!openasip_handle) {
+        fprintf(stderr, "OpenASIP handle is not initialized\n");
+        return NULL;
+    }
+    return openasip_handle;
+}
+
+#endif /* ENABLE_OPENASIP*/
+
 static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                         DeviceState *dev)
 {
@@ -1981,6 +2078,13 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
                               NULL, NULL);
     object_class_property_set_description(oc, "iommu-sys",
                                           "Enable IOMMU platform device");
+
+#ifdef ENABLE_OPENASIP
+    object_class_property_add_str(oc, "libopenasip-path", virt_get_libopenasip_path, virt_set_libopenasip_path);
+    object_class_property_set_description(oc, "libopenasip-path", "Path to OASIP's libopenasip.so");
+    object_class_property_add_str(oc, "openasip-machine-path", virt_get_openasip_machine_path, virt_set_openasip_machine_path);
+    object_class_property_set_description(oc, "openasip-machine-path", "Path to the OpenASIP's machine file");
+#endif /* ENABLE_OPENASIP */
 }
 
 static const TypeInfo virt_machine_typeinfo = {

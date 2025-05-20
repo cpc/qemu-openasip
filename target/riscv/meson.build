@@ -1,7 +1,21 @@
+cc = meson.get_compiler('c')
+openasip_enabled = cc.compiles('''
+  #ifndef ENABLE_OPENASIP
+  #error "ENABLE_OPENASIP not defined"
+  #endif
+  int main(void) { return 0; }
+''',
+  name: 'probe ENABLE_OPENASIP from --extra-cflags')
+
+openasip_flag = []
+if openasip_enabled
+  openasip_flag = ['--enable_openasip']
+endif
+
 # FIXME extra_args should accept files()
 gen = [
   decodetree.process('insn16.decode', extra_args: ['--static-decode=decode_insn16', '--insnwidth=16']),
-  decodetree.process('insn32.decode', extra_args: '--static-decode=decode_insn32'),
+  decodetree.process('insn32.decode', extra_args: ['--static-decode=decode_insn32'] + openasip_flag),
   decodetree.process('xthead.decode', extra_args: '--static-decode=decode_xthead'),
   decodetree.process('XVentanaCondOps.decode', extra_args: '--static-decode=decode_XVentanaCodeOps'),
 ]
