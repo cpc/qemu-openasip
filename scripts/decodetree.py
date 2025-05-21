@@ -1623,8 +1623,8 @@ def main():
 
     if enable_openasip:
         output('/* OPENASIP ENABLED: fallback argument block for illegal instructions */\n')
-        output('typedef arg_decode_insn3219 arg_unknown;\n')
-        output('static bool trans_unknown(DisasContext *ctx, uint32_t insn, arg_unknown *a);\n')
+        output('typedef arg_decode_insn3219 arg_openasip;\n')
+        output('static bool trans_openasip(DisasContext *ctx, uint32_t insn, arg_openasip *a);\n')
 
     if anyextern:
         output("#pragma GCC diagnostic pop\n\n")
@@ -1646,8 +1646,8 @@ def main():
         output(i4, '} u;\n\n')
         toppat.output_code(4, False, 0, 0)
     if enable_openasip:
-        output('decode_insn32_extract_r4_rm(ctx, &u.f_decode_insn3219, insn);\n')
-        output(i4, 'return ', translate_prefix, '_unknown(ctx, insn, &u.f_decode_insn3219', ');\n')
+        output(i4, 'decode_insn32_extract_r4_rm(ctx, &u.f_decode_insn3219, insn);\n')
+        output(i4, 'return ', translate_prefix, '_openasip(ctx, insn, &u.f_decode_insn3219', ');\n')
     else:
         output(i4, 'return false;\n')
     output('}\n')

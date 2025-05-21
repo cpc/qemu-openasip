@@ -1286,6 +1286,6 @@ DEF_HELPER_4(vsm4r_vv, void, ptr, ptr, env, i32)
 DEF_HELPER_4(vsm4r_vs, void, ptr, ptr, env, i32)
 
 #ifdef ENABLE_OPENASIP
-DEF_HELPER_FLAGS_4(unknown, TCG_CALL_NO_RWG_SE, tl, tl, tl, tl, i32)
+DEF_HELPER_FLAGS_5(openasip, TCG_CALL_NO_RWG_SE, tl, env, tl, tl, tl, i32)
 #endif /* ENABLE_OPENASIP*/
 

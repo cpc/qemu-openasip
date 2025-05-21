@@ -1222,7 +1222,7 @@ static bool trans_csrrci(DisasContext *ctx, arg_csrrci * a)
     }
 }
 #ifdef ENABLE_OPENASIP
-static bool trans_unknown(DisasContext *ctx, uint32_t insn, arg_unknown *a)
+static bool trans_openasip(DisasContext *ctx, uint32_t insn, arg_openasip *a)
 {
     TCGv src1 = get_gpr(ctx, a->rs1, EXT_NONE);
     TCGv src2 = get_gpr(ctx, a->rs2, EXT_NONE);
@@ -1231,7 +1231,7 @@ static bool trans_unknown(DisasContext *ctx, uint32_t insn, arg_unknown *a)
 
 
     TCGv_i32 instruction = tcg_constant_i32(insn);
-    gen_helper_unknown(dest, src1, src2, src3, instruction);
+    gen_helper_openasip(dest, tcg_env, src1, src2, src3, instruction);
 
     gen_set_gpr(ctx, a->rd, dest);
 
