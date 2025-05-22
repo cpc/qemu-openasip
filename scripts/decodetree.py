@@ -36,7 +36,6 @@ formats = {}
 allpatterns = []
 anyextern = False
 testforerror = False
-enable_openasip = False
 
 translate_prefix = 'trans'
 translate_scope = 'static '
@@ -1220,8 +1219,11 @@ def parse_generic(lineno, parent_pat, name, toks):
     if not is_format:
         allbits = fieldmask | fixedmask | undefmask
         if allbits != insnmask:
-            error(lineno, 'bits left unspecified ',
-                  f'({whex(allbits ^ insnmask)})')
+            if name.startswith("openasip"):
+                undefmask |= (insnmask & ~allbits)
+            else:
+                error(lineno, 'bits left unspecified ',
+                      f'({whex(allbits ^ insnmask)})')
 # end parse_general
 
 
@@ -1512,13 +1514,12 @@ def main():
     global variablewidth
     global anyextern
     global testforerror
-    global enable_openasip
 
     decode_scope = 'static '
 
     long_opts = ['decode=', 'translate=', 'output=', 'insnwidth=',
                  'static-decode=', 'varinsnwidth=', 'test-for-error',
-                 'output-null', 'enable_openasip']
+                 'output-null']
     try:
         (opts, args) = getopt.gnu_getopt(sys.argv[1:], 'o:vw:', long_opts)
     except getopt.GetoptError as err:
@@ -1551,8 +1552,6 @@ def main():
             testforerror = True
         elif o == '--output-null':
             output_null = True
-        elif o == '--enable_openasip':
-            enable_openasip = True
         else:
             assert False, 'unhandled option'
 
@@ -1621,11 +1620,6 @@ def main():
             out_pats[i.name] = i
     output('\n')
 
-    if enable_openasip:
-        output('/* OPENASIP ENABLED: fallback argument block for illegal instructions */\n')
-        output('typedef arg_decode_insn3219 arg_openasip;\n')
-        output('static bool trans_openasip(DisasContext *ctx, uint32_t insn, arg_openasip *a);\n')
-
     if anyextern:
         output("#pragma GCC diagnostic pop\n\n")
 
@@ -1645,11 +1639,8 @@ def main():
             output(i4, i4, f.struct_name(), ' f_', f.name, ';\n')
         output(i4, '} u;\n\n')
         toppat.output_code(4, False, 0, 0)
-    if enable_openasip:
-        output(i4, 'decode_insn32_extract_r4_rm(ctx, &u.f_decode_insn3219, insn);\n')
-        output(i4, 'return ', translate_prefix, '_openasip(ctx, insn, &u.f_decode_insn3219', ');\n')
-    else:
-        output(i4, 'return false;\n')
+
+    output(i4, 'return false;\n')
     output('}\n')
 
     if variablewidth:
