@@ -1944,7 +1944,7 @@ int initialize_openasip(char* libpath, char* machine_file_path)
     }
     
     dlerror();
-    InitializeMachineFn *init_machine = (InitializeMachineFn *)dlsym(h, "InitializeMachine");
+    initializeMachineFn *init_machine = (initializeMachineFn *)dlsym(h, "initializeMachine");
     char *dlsym_error = dlerror();
     if (dlsym_error) {
         fprintf(stderr, "Failed to find InitializeMachine symbol: %s\n", dlsym_error);

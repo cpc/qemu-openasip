@@ -721,25 +721,25 @@ target_ulong helper_hyp_hlvx_wu(CPURISCVState *env, target_ulong addr)
 
 #ifdef ENABLE_OPENASIP
 #include "hw/riscv/virt.h"
-typedef int UnpackInstructionFn(const uint32_t opcode,
+typedef int unpackInstructionFn(const uint32_t opcode,
                                 char **output,
                                 char **error);
-static UnpackInstructionFn *UnpackInstruction;
-
+static unpackInstructionFn *unpackInstruction;
 #if TARGET_LONG_BITS == 32
-typedef int ExecuteInstruction32Fn(const char *opName,
+typedef int executeInstruction32Fn(const char *opName,
                                    const uint32_t *inputs,
                                    uint32_t *output,
                                    char **error_msg);
 
-static ExecuteInstruction32Fn *ExecuteInstruction32;
+static executeInstruction32Fn *executeInstruction32;
 #else
-typedef int ExecuteInstruction64Fn(const char *opName,
-                                   const uint64_t *inputs,
-                                   uint64_t *output,
-                                   char **error_msg);
 
-static ExecuteInstruction64Fn *ExecuteInstruction64;
+typedef int executeInstruction64Fn(const char *opName,
+    const uint64_t *inputs,
+    uint64_t *output,
+    char **error_msg);
+
+static executeInstruction64Fn *executeInstruction64;
 #endif
 
 target_ulong HELPER(openasip)(CPURISCVState *env, target_ulong rs1, target_ulong rs2, target_ulong rs3, uint32_t insn)
@@ -751,37 +751,31 @@ target_ulong HELPER(openasip)(CPURISCVState *env, target_ulong rs1, target_ulong
         return EXIT_FAILURE;
     }
 
-    const target_ulong inputs[] = {rs1, rs2, rs3};
-    target_ulong result;
     char *instruction_name = NULL;
     char *error = NULL;
 
-    UnpackInstruction = (UnpackInstructionFn *)dlsym(h, "UnpackInstruction");
+    unpackInstruction = (unpackInstructionFn *)dlsym(h, "unpackInstruction");
 
-    int success = UnpackInstruction(insn, &instruction_name, &error);
+    int success = unpackInstruction(insn, &instruction_name, &error);
     if (success == -1)
     {
         fprintf(stderr, "  Instruction: 0x%08x\n", insn);
-        fprintf(stderr, "  RS1: 0x%lx, RS2: 0x%lx, RS3: 0x%lx\n", 
-            (unsigned long)rs1, (unsigned long)rs2, (unsigned long)rs3);
+        fprintf(stderr, "  RS1: 0x%lx, RS2: 0x%lx, RS3: 0x%lx\n",
+                (unsigned long)rs1, (unsigned long)rs2, (unsigned long)rs3);
         fprintf(stderr, "UnpackInstruction Error: %s\n", error);
         free(error);
         riscv_raise_exception(env, RISCV_EXCP_ILLEGAL_INST, GETPC());
         // exit(EXIT_FAILURE);
     }
 
+    target_ulong result;
+    const target_ulong inputs[] = {rs1, rs2, rs3};
 #if TARGET_LONG_BITS == 32
-    ExecuteInstruction32 = (ExecuteInstruction32Fn *)dlsym(h, "ExecuteInstruction32");
-    success = ExecuteInstruction32(instruction_name,
-                                   inputs,
-                                   &result,
-                                   &error);
+    executeInstruction32 = (executeInstruction32Fn *)dlsym(h, "executeInstruction32");
+    success = executeInstruction32(instruction_name, inputs, &result, &error);
 #else
-    ExecuteInstruction64 = (ExecuteInstruction64Fn *)dlsym(h, "ExecuteInstruction64");
-    success = ExecuteInstruction64(instruction_name,
-                                   inputs,
-                                   &result,
-                                   &error);
+    executeInstruction64 = (executeInstruction64Fn *)dlsym(h, "executeInstruction64");
+    success = executeInstruction64(instruction_name, inputs, &result, &error);
 #endif
     if (success == -1)
     {

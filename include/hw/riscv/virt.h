@@ -26,7 +26,7 @@
 #include "hw/intc/riscv_imsic.h"
 #ifdef ENABLE_OPENASIP
 #include "dlfcn.h"
-typedef int InitializeMachineFn(const char *machine_path, char **error);
+typedef int initializeMachineFn(const char *machine_path, char **error);
 int initialize_openasip(char* libpath, char* machine_file_path);
 void *get_openasip_handle(void);
 #endif /* ENABLE_OPENASIP*/
