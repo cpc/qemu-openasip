@@ -27,7 +27,7 @@
 // #ifdef ENABLE_OPENASIP
 #include "dlfcn.h"
 typedef int initializeMachineFn(const char *machine_path, char **error);
-int initialize_openasip(char* libpath, char* machine_file_path);
+int initialize_openasip(const char* libpath, const char* machine_file_path);
 void *get_openasip_handle(void);
 // #endif /* ENABLE_OPENASIP*/
 

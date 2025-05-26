@@ -1912,7 +1912,7 @@ static void virt_set_openasip_machine_path(Object *obj, const char *val, Error *
     s->openasip_machine_path = g_strdup(val);
 }
 
-static void load_openasip_so(char* path)
+static void load_openasip_so(const char* path)
 {
     void *h = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
     if (!h) {
@@ -1928,14 +1928,19 @@ static void load_openasip_so(char* path)
     openasip_handle = h;
 }
 
-int initialize_openasip(char* libpath, char* machine_file_path)
+int initialize_openasip(const char* libpath, const char* machine_file_path)
 {        
-    if (!libpath || !machine_file_path) {
-        fprintf(stderr, "Library path or machine file path is NULL\n");
+    if (!machine_file_path) {
+        fprintf(stderr, "Machine path is null\n");
         exit(EXIT_FAILURE);
     }
-    
+
+    if (!libpath) {
+        fprintf(stdout, "libopenasip.so path not provided, searching for it automatically..\n");
+        libpath = "libopenasip.so";
+    } 
     load_openasip_so(libpath);
+
     
     void *h = openasip_handle;
     if (!h) {
