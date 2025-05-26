@@ -719,7 +719,7 @@ target_ulong helper_hyp_hlvx_wu(CPURISCVState *env, target_ulong addr)
 
 
 
-#ifdef ENABLE_OPENASIP
+// #ifdef ENABLE_OPENASIP
 #include "hw/riscv/virt.h"
 typedef int unpackInstructionFn(const uint32_t opcode,
                                 char **output,
@@ -728,6 +728,7 @@ static unpackInstructionFn *unpackInstruction;
 #if TARGET_LONG_BITS == 32
 typedef int executeInstruction32Fn(const char *opName,
                                    const uint32_t *inputs,
+                                   const uint32_t inputs_count,
                                    uint32_t *output,
                                    char **error_msg);
 
@@ -736,6 +737,7 @@ static executeInstruction32Fn *executeInstruction32;
 
 typedef int executeInstruction64Fn(const char *opName,
     const uint64_t *inputs,
+    const uint64_t inputs_count,
     uint64_t *output,
     char **error_msg);
 
@@ -772,10 +774,10 @@ target_ulong HELPER(openasip)(CPURISCVState *env, target_ulong rs1, target_ulong
     const target_ulong inputs[] = {rs1, rs2, rs3};
 #if TARGET_LONG_BITS == 32
     executeInstruction32 = (executeInstruction32Fn *)dlsym(h, "executeInstruction32");
-    success = executeInstruction32(instruction_name, inputs, &result, &error);
+    success = executeInstruction32(instruction_name, inputs, 3, &result, &error);
 #else
     executeInstruction64 = (executeInstruction64Fn *)dlsym(h, "executeInstruction64");
-    success = executeInstruction64(instruction_name, inputs, &result, &error);
+    success = executeInstruction64(instruction_name, inputs, 3, &result, &error);
 #endif
     if (success == -1)
     {
@@ -790,4 +792,4 @@ target_ulong HELPER(openasip)(CPURISCVState *env, target_ulong rs1, target_ulong
     }
     return result;
 }
-#endif /* ENABLE_OPENASIP*/
+// #endif /* ENABLE_OPENASIP*/

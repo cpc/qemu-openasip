@@ -1221,7 +1221,7 @@ static bool trans_csrrci(DisasContext *ctx, arg_csrrci * a)
                              ctx->zero, ctx->zero, mask, ctx->zero);
     }
 }
-#ifdef ENABLE_OPENASIP
+// #ifdef ENABLE_OPENASIP
 static bool trans_openasip_0(DisasContext *ctx, arg_openasip_0 *a)
 {
     TCGv src1 = get_gpr(ctx, a->rs1, EXT_NONE);
@@ -1255,4 +1255,4 @@ static bool trans_openasip_1(DisasContext *ctx, arg_openasip_1 *a)
 
     return true;
 }
-#endif /* ENABLE_OPENASIP*/
+// #endif /* ENABLE_OPENASIP*/
