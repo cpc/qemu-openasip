@@ -1219,8 +1219,11 @@ def parse_generic(lineno, parent_pat, name, toks):
     if not is_format:
         allbits = fieldmask | fixedmask | undefmask
         if allbits != insnmask:
-            error(lineno, 'bits left unspecified ',
-                  f'({whex(allbits ^ insnmask)})')
+            if name.startswith("openasip"):
+                undefmask |= (insnmask & ~allbits)
+            else:
+                error(lineno, 'bits left unspecified ',
+                      f'({whex(allbits ^ insnmask)})')
 # end parse_general
 
 

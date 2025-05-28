@@ -27,6 +27,7 @@
 #include "exec/helper-proto.h"
 #include "exec/tlb-flags.h"
 #include "trace.h"
+#include "openasip.h"
 
 /* Exceptions processing helpers */
 G_NORETURN void riscv_raise_exception(CPURISCVState *env,
@@ -715,3 +716,36 @@ target_ulong helper_hyp_hlvx_wu(CPURISCVState *env, target_ulong addr)
 }
 
 #endif /* !CONFIG_USER_ONLY */
+
+target_ulong HELPER(openasip)(CPURISCVState *env, target_ulong rs1, target_ulong rs2, target_ulong rs3, uint32_t insn)
+{
+    char *opName = NULL;
+    char *err = NULL;
+    int ret;
+    const target_ulong inputs[] = {rs1, rs2, rs3};
+    target_ulong result;
+
+    openasip_load_module();
+    ret = openasip_unpackInstruction(insn, &opName, &err);
+    if (ret < 0) {
+        printf("openasip decode error: %s\n", err);
+        g_free(err);
+        g_free(opName);
+        riscv_raise_exception(env, RISCV_EXCP_ILLEGAL_INST, GETPC());
+    }
+#if TARGET_LONG_BITS == 32
+    ret = openasip_executeInstruction32(opName, inputs, 3, &result, &err);
+#else
+    ret = openasip_executeInstruction64(opName, inputs, 3, &result, &err);
+#endif
+    if (ret < 0) {
+        printf("openasip execution error: %s\n", err);
+        g_free(err);
+        g_free(opName);
+        riscv_raise_exception(env, RISCV_EXCP_ILLEGAL_INST, GETPC());
+    }
+
+    g_free(err);
+    g_free(opName);
+    return result;
+}

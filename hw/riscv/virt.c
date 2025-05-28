@@ -58,6 +58,7 @@
 #include "qapi/qapi-visit-common.h"
 #include "hw/virtio/virtio-iommu.h"
 #include "hw/uefi/var-service-api.h"
+#include "openasip.h"
 
 /* KVM AIA only supports APLIC MSI. APLIC Wired is always emulated by QEMU. */
 static bool virt_use_kvm_aia_aplic_imsic(RISCVVirtAIAType aia_type)
@@ -1744,6 +1745,17 @@ static void virt_machine_init(MachineState *machine)
         sysbus_realize_and_unref(SYS_BUS_DEVICE(iommu_sys), &error_fatal);
     }
 
+    if (s->openasip_machine_path)
+    {
+        char *err = NULL;
+        openasip_load_module();
+        if (openasip_initializeMachine(s->openasip_machine_path, &err) != 0) {
+            error_report("openasip init failed: %s", err);
+            g_free(err);
+            exit(1);
+        }
+    }
+
     s->machine_done.notify = virt_machine_done;
     qemu_add_machine_init_done_notifier(&s->machine_done);
 }
@@ -1874,6 +1886,19 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
     visit_type_OnOffAuto(v, name, &s->acpi, errp);
 }
 
+static char *virt_get_openasip_machine_path(Object *obj, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    return g_strdup(s->openasip_machine_path);
+}
+
+static void virt_set_openasip_machine_path(Object *obj, const char *val, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    g_free(s->openasip_machine_path);
+    s->openasip_machine_path = g_strdup(val);
+}
+
 static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                         DeviceState *dev)
 {
@@ -1980,6 +2005,9 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
                               NULL, NULL);
     object_class_property_set_description(oc, "iommu-sys",
                                           "Enable IOMMU platform device");
+
+    object_class_property_add_str(oc, "openasip-machine-path", virt_get_openasip_machine_path, virt_set_openasip_machine_path);
+    object_class_property_set_description(oc, "openasip-machine-path", "Path to the OpenASIP machine file");
 }
 
 static const TypeInfo virt_machine_typeinfo = {

@@ -1284,3 +1284,5 @@ DEF_HELPER_4(vgmul_vv, void, ptr, ptr, env, i32)
 DEF_HELPER_5(vsm4k_vi, void, ptr, ptr, i32, env, i32)
 DEF_HELPER_4(vsm4r_vv, void, ptr, ptr, env, i32)
 DEF_HELPER_4(vsm4r_vs, void, ptr, ptr, env, i32)
+
+DEF_HELPER_FLAGS_5(openasip, TCG_CALL_NO_RWG_SE, tl, env, tl, tl, tl, i32)
