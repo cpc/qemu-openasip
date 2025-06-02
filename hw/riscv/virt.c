@@ -1745,11 +1745,11 @@ static void virt_machine_init(MachineState *machine)
         sysbus_realize_and_unref(SYS_BUS_DEVICE(iommu_sys), &error_fatal);
     }
 
-    if (s->openasip_machine_path)
+    if (s->oasip_machine)
     {
         g_autofree char *err = NULL;
         openasip_load_module();
-        if (openasip_initializeMachine(s->openasip_machine_path, &err) != 0) {
+        if (openasip_initializeMachine(s->oasip_machine, &err) != 0) {
             error_report("openasip init failed: %s", err);
             exit(1);
         }
@@ -1885,17 +1885,17 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
     visit_type_OnOffAuto(v, name, &s->acpi, errp);
 }
 
-static char *virt_get_openasip_machine_path(Object *obj, Error **errp)
+static char *virt_get_oasip_machine(Object *obj, Error **errp)
 {
     RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
-    return g_strdup(s->openasip_machine_path);
+    return g_strdup(s->oasip_machine);
 }
 
-static void virt_set_openasip_machine_path(Object *obj, const char *val, Error **errp)
+static void virt_set_oasip_machine(Object *obj, const char *val, Error **errp)
 {
     RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
-    g_free(s->openasip_machine_path);
-    s->openasip_machine_path = g_strdup(val);
+    g_free(s->oasip_machine);
+    s->oasip_machine = g_strdup(val);
 }
 
 static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
@@ -2005,8 +2005,8 @@ static void virt_machine_class_init(ObjectClass *oc, const void *data)
     object_class_property_set_description(oc, "iommu-sys",
                                           "Enable IOMMU platform device");
 
-    object_class_property_add_str(oc, "openasip-machine-path", virt_get_openasip_machine_path, virt_set_openasip_machine_path);
-    object_class_property_set_description(oc, "openasip-machine-path", "Path to the OpenASIP machine file");
+    object_class_property_add_str(oc, "oasip-machine", virt_get_oasip_machine, virt_set_oasip_machine);
+    object_class_property_set_description(oc, "oasip-machine", "Path to the OpenASIP machine file");
 }
 
 static const TypeInfo virt_machine_typeinfo = {

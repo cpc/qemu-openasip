@@ -64,7 +64,7 @@ struct RISCVVirtState {
     struct GPEXHost *gpex_host;
     OnOffAuto iommu_sys;
     uint16_t pci_iommu_bdf;
-    char* openasip_machine_path;
+    char* oasip_machine;
 };
 
 enum {
