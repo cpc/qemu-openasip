@@ -23,8 +23,7 @@ typedef int executeInstruction64Fn(const char *opName,
                                    char **error_msg);
 extern executeInstruction64Fn *openasip_executeInstruction64;
 
-typedef int initializeMachineFn(const char *machine_path,
-                                char **error);
+typedef int initializeMachineFn(const char *machine_path, char **error);
 extern initializeMachineFn *openasip_initializeMachine;
 
 #endif

@@ -1747,11 +1747,10 @@ static void virt_machine_init(MachineState *machine)
 
     if (s->openasip_machine_path)
     {
-        char *err = NULL;
+        g_autofree char *err = NULL;
         openasip_load_module();
         if (openasip_initializeMachine(s->openasip_machine_path, &err) != 0) {
             error_report("openasip init failed: %s", err);
-            g_free(err);
             exit(1);
         }
     }
