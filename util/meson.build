@@ -103,6 +103,7 @@ if have_block
   util_ss.add(files('readline.c'))
   util_ss.add(files('throttle.c'))
   util_ss.add(files('timed-average.c'))
+  util_ss.add(files('openasip.c'))
   if config_host_data.get('CONFIG_INOTIFY1')
     util_ss.add(files('filemonitor-inotify.c'))
   else

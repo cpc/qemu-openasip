@@ -55,6 +55,7 @@
 #include "hw/display/ramfb.h"
 #include "hw/acpi/aml-build.h"
 #include "qapi/qapi-visit-common.h"
+#include "openasip.h"
 
 /*
  * The virt machine physical address space used by some of the devices
@@ -1626,6 +1627,17 @@ static void virt_machine_init(MachineState *machine)
         create_fdt(s, memmap);
     }
 
+    /* load in openasip machine adf file */
+    if (s->oasip_machine)
+    {
+        g_autofree char *err = NULL;
+        openasip_load_module();
+        if (openasip_initializeMachine(s->oasip_machine, &err) != 0) {
+            error_report("openasip init failed: %s", err);
+            exit(1);
+        }
+    }
+
     s->machine_done.notify = virt_machine_done;
     qemu_add_machine_init_done_notifier(&s->machine_done);
 }
@@ -1745,6 +1757,19 @@ static void virt_set_acpi(Object *obj, Visitor *v, const char *name,
     visit_type_OnOffAuto(v, name, &s->acpi, errp);
 }
 
+static char *virt_get_oasip_machine(Object *obj, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    return g_strdup(s->oasip_machine);
+}
+
+static void virt_set_oasip_machine(Object *obj, const char *val, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    g_free(s->oasip_machine);
+    s->oasip_machine = g_strdup(val);
+}
+
 static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                         DeviceState *dev)
 {
@@ -1825,6 +1850,11 @@ static void virt_machine_class_init(ObjectClass *oc, void *data)
                               NULL, NULL);
     object_class_property_set_description(oc, "acpi",
                                           "Enable ACPI");
+
+    object_class_property_add_str(
+        oc, "oasip-machine", virt_get_oasip_machine, virt_set_oasip_machine);
+    object_class_property_set_description(
+        oc, "oasip-machine", "Path to the OpenASIP machine file");
 }
 
 static void virt_machine_class_init_cosim(ObjectClass *oc, void *data)
