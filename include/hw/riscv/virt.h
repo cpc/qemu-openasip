@@ -60,7 +60,9 @@ struct RISCVVirtState {
     char *oem_table_id;
     OnOffAuto acpi;
     const MemMapEntry *memmap;
-    char* oasip_machine;;
+    char* oasip_machine;
+    uint32_t shmem_base;
+    uint32_t shmem_size;
 };
 
 enum {

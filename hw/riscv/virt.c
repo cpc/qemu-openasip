@@ -56,6 +56,7 @@
 #include "hw/acpi/aml-build.h"
 #include "qapi/qapi-visit-common.h"
 #include "openasip.h"
+#include "qemu/cutils.h"
 
 /*
  * The virt machine physical address space used by some of the devices
@@ -101,7 +102,7 @@ static const MemMapEntry virt_memmap[] = {
     [VIRT_VIRTIO] =       { 0x10001000,        0x1000 },
     [VIRT_FW_CFG] =       { 0x10100000,          0x18 },
     [VIRT_FLASH] =        { 0x20000000,     0x4000000 },
-    [VIRT_COSIM] =        { 0x28000000,    0x01000000 },
+    // [VIRT_COSIM] =        { 0x28000000,    0x01000000 },
     [VIRT_IMSIC_M] =      { 0x24000000, VIRT_IMSIC_MAX_SIZE },
     [VIRT_IMSIC_S] =      { 0x28000000, VIRT_IMSIC_MAX_SIZE },
     [VIRT_PCIE_ECAM] =    { 0x30000000,    0x10000000 },
@@ -1134,7 +1135,7 @@ static inline DeviceState *gpex_pcie_init(MemoryRegion *sys_mem,
 static void virt_create_remoteport(MachineState *machine,
                                    MemoryRegion *system_memory)
 {
-    const MemMapEntry *memmap = virt_memmap;
+    // const MemMapEntry *memmap = virt_memmap;
     RISCVVirtState *s = RISCV_VIRT_MACHINE(machine);
     SysBusDevice *sbd;
     DeviceClass *dc;
@@ -1144,6 +1145,15 @@ static void virt_create_remoteport(MachineState *machine,
     Object *rpirq_obj;
     int i;
 
+    uint32_t shmem_base = s->shmem_base;
+    uint32_t shmem_size = s->shmem_size;
+    if (shmem_base == 0) {
+        shmem_base = 0x28000000;
+    }
+    if (shmem_size == 0) {
+        shmem_size = 0x01000000;
+    }
+
     rp_obj = object_new("remote-port");
     object_property_add_child(OBJECT(machine), "cosim", rp_obj);
     object_property_set_str(rp_obj, "chrdev-id", "cosim", &error_fatal);
@@ -1152,8 +1162,8 @@ static void virt_create_remoteport(MachineState *machine,
     rpm_obj = object_new("remote-port-memory-master");
     object_property_add_child(OBJECT(machine), "cosim-mmap-0", rpm_obj);
     object_property_set_int(rpm_obj, "map-num", 1, &error_fatal);
-    object_property_set_int(rpm_obj, "map-offset", memmap[VIRT_COSIM].base, &error_fatal);
-    object_property_set_int(rpm_obj, "map-size", memmap[VIRT_COSIM].size, &error_fatal);
+    object_property_set_int(rpm_obj, "map-offset", shmem_base, &error_fatal);
+    object_property_set_int(rpm_obj, "map-size", shmem_size, &error_fatal);
     object_property_set_int(rpm_obj, "rp-chan0", 9, &error_fatal);
 
     rpms_obj = object_new("remote-port-memory-slave");
@@ -1188,7 +1198,7 @@ static void virt_create_remoteport(MachineState *machine,
 
     /* Connect things to the machine.  */
     sbd = SYS_BUS_DEVICE(rpm_obj);
-    memory_region_add_subregion(system_memory, memmap[VIRT_COSIM].base,
+    memory_region_add_subregion(system_memory, shmem_base,
                                 sysbus_mmio_get_region(sbd, 0));
 
     /* Hook up IRQs.  */
@@ -1770,6 +1780,45 @@ static void virt_set_oasip_machine(Object *obj, const char *val, Error **errp)
     s->oasip_machine = g_strdup(val);
 }
 
+static char *virt_get_shmem_base(Object *obj, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    char val[32];
+    sprintf(val, "%d", s->shmem_base);
+    return g_strdup(val);
+}
+
+static void virt_set_shmem_base(Object *obj, const char *val, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    s->shmem_base = atoi(val);
+    if (s->shmem_base > 0) {
+        error_setg(errp, "Invalid shmem base addr");
+        error_append_hint(errp, "Valid values < 0\n");
+    }
+}
+
+static char *virt_get_shmem_size(Object *obj, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    char val[32];
+    sprintf(val, "%d", s->shmem_size);
+    return g_strdup(val);
+}
+
+static void virt_set_shmem_size(Object *obj, const char *val, Error **errp)
+{
+    RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
+    uint64_t size;
+    const char *endptr = NULL;
+
+    if (qemu_strtosz(val, &endptr, &size) < 0 || *endptr != '\0') {
+        error_setg(errp, "Invalid size format: %s", val);
+        return;
+    }
+    s->shmem_size = (uint32_t)size;
+}
+
 static HotplugHandler *virt_machine_get_hotplug_handler(MachineState *machine,
                                                         DeviceState *dev)
 {
@@ -1855,6 +1904,16 @@ static void virt_machine_class_init(ObjectClass *oc, void *data)
         oc, "oasip-machine", virt_get_oasip_machine, virt_set_oasip_machine);
     object_class_property_set_description(
         oc, "oasip-machine", "Path to the OpenASIP machine file");
+
+    object_class_property_add_str(
+        oc, "shmem-base", virt_get_shmem_base, virt_set_shmem_base);
+    object_class_property_set_description(
+        oc, "shmem-base", "Base physical address of the shared memory region (default 0x28000000)");
+
+    object_class_property_add_str(
+        oc, "shmem-size", virt_get_shmem_size, virt_set_shmem_size);
+    object_class_property_set_description(
+        oc, "shmem-size", "Size of the shared memory region (default 16MiB)");
 }
 
 static void virt_machine_class_init_cosim(ObjectClass *oc, void *data)
