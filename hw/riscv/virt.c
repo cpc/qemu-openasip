@@ -1791,11 +1791,14 @@ static char *virt_get_shmem_base(Object *obj, Error **errp)
 static void virt_set_shmem_base(Object *obj, const char *val, Error **errp)
 {
     RISCVVirtState *s = RISCV_VIRT_MACHINE(obj);
-    s->shmem_base = atoi(val);
-    if (s->shmem_base > 0) {
-        error_setg(errp, "Invalid shmem base addr");
-        error_append_hint(errp, "Valid values < 0\n");
+    uint64_t base;
+    const char *endptr = NULL;
+
+    if (qemu_strtou64(val, &endptr, 0, &base) < 0 || *endptr != '\0') {
+        error_setg(errp, "Invalid shmem base address: %s", val);
+        return;
     }
+    s->shmem_base = base;
 }
 
 static char *virt_get_shmem_size(Object *obj, Error **errp)
